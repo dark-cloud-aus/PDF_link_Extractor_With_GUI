@@ -1,0 +1,67 @@
+# Simple PDF URL Link Extractor with GUI, written by David Gilmore, July 2023. V1.8
+
+
+import PyPDF4
+import re
+import tkinter as tk
+from tkinter import filedialog, messagebox
+
+def find_urls(string):
+    # Find all the Strings that match the pattern
+    regex = r"(https?://\S+)"
+    urls = re.findall(regex, string)
+    return urls
+
+def extract_links_and_display_count(pdf_path):
+    # Open the PDF file
+    file = open(pdf_path, 'rb')
+    pdf_reader = PyPDF4.PdfFileReader(file)
+
+    total_links = 0
+
+    # Iterating over all the pages of the file
+    for page_no in range(pdf_reader.numPages):
+        page = pdf_reader.getPage(page_no)
+        # Extract the text from the page
+        text = page.extractText()
+        # Count the URLs on this page
+        urls_on_page = find_urls(text)
+        total_links += len(urls_on_page)
+
+        # Find URLs in annotations
+        annotations = page.get('/Annots')
+        if annotations:
+            for annotation in annotations:
+                annotation_object = annotation.getObject()
+                if annotation_object.get('/Subtype') == '/Link':
+                    if annotation_object.get('/A') and annotation_object['/A'].get('/URI'):
+                        total_links += 1
+
+    # Close the file
+    file.close()
+
+    # Display the message with the link count in the GUI
+    messagebox.showinfo("PDF Link Extractor", f"Your PDF has {total_links} number of links")
+
+def browse_pdf_file():
+    file_path = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")])
+    if file_path:
+        # Rename the selected PDF file to 'file.pdf'
+        new_file_path = "file.pdf"
+        import os
+        os.rename(file_path, new_file_path)
+
+        # Run the extraction function
+        extract_links_and_display_count(new_file_path)
+
+# Create the GUI
+root = tk.Tk()
+root.title("PDF Link Extractor")
+root.geometry("300x150")
+
+# Create the "Select PDF" button
+select_pdf_button = tk.Button(root, text="Select PDF", command=browse_pdf_file)
+select_pdf_button.pack(pady=20)
+
+# Start the GUI event loop
+root.mainloop()
